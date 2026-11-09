@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/players/*", "/api/players/*/matches", "/api/players/*/rating-history").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/leaderboards/*").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                // WebSocket upgrades authenticate with a one-time ticket (TicketHandshakeInterceptor).
+                .requestMatchers("/ws").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated());
         return http.build();

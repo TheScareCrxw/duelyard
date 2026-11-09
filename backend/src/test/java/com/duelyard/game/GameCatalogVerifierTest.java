@@ -13,8 +13,7 @@ import org.junit.jupiter.api.Test;
 class GameCatalogVerifierTest {
 
     private static GameModule module(String slug) {
-        GameDefinition def = new GameDefinition(slug, slug, "", 2, 2, Set.of(GameMode.CASUAL), GameAvailability.AVAILABLE);
-        return () -> def;
+        return com.duelyard.support.StubGameModule.of(slug, slug);
     }
 
     private static Game game(String slug) {

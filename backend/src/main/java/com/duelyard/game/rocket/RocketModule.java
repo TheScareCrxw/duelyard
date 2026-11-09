@@ -1,6 +1,8 @@
 package com.duelyard.game.rocket;
 
+import java.time.Duration;
 import java.util.Set;
+import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Component;
 
@@ -8,25 +10,33 @@ import com.duelyard.game.GameAvailability;
 import com.duelyard.game.GameDefinition;
 import com.duelyard.game.GameMode;
 import com.duelyard.game.GameModule;
+import com.duelyard.game.engine.GameSession;
 
-/**
- * Rocket Launcher game module. Rules and server-authoritative state will be added in its own phase,
- * after its rule set and state architecture have been agreed.
- */
+/** Rocket Launcher. Rules: docs/games.md. */
 @Component
 public class RocketModule implements GameModule {
 
     private static final GameDefinition DEFINITION = new GameDefinition(
         "rocket-launcher",
         "Rocket Launcher",
-        "Arc your rockets over terrain and outgun your rival.",
+        "Read the wind, arc your rockets and outgun your rival.",
         2,
         2,
         Set.of(GameMode.RANKED, GameMode.CASUAL),
-        GameAvailability.COMING_SOON);
+        GameAvailability.AVAILABLE);
 
     @Override
     public GameDefinition definition() {
         return DEFINITION;
+    }
+
+    @Override
+    public GameSession newSession(RandomGenerator random) {
+        return new RocketSession(random);
+    }
+
+    @Override
+    public Duration turnTimeLimit() {
+        return Duration.ofSeconds(30);
     }
 }

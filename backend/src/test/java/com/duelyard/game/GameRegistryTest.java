@@ -11,8 +11,7 @@ import org.junit.jupiter.api.Test;
 class GameRegistryTest {
 
     private static GameModule module(String slug, String name) {
-        GameDefinition def = new GameDefinition(slug, name, "", 2, 2, Set.of(GameMode.CASUAL), GameAvailability.AVAILABLE);
-        return () -> def;
+        return com.duelyard.support.StubGameModule.of(slug, name);
     }
 
     @Test
