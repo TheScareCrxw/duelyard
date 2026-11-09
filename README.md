@@ -54,7 +54,7 @@ npm run dev
 
 ```bash
 cd backend && ./mvnw test
-cd frontend && npm run lint && npx tsc --noEmit && npm run build
+cd frontend && npm test && npm run lint && npx tsc --noEmit && npm run build
 ```
 
 ## Configuration
@@ -67,7 +67,15 @@ cd frontend && npm run lint && npx tsc --noEmit && npm run build
 | `DB_URL` | backend | `jdbc:postgresql://localhost:5432/duelyard` | JDBC URL |
 | `DB_USERNAME` / `DB_PASSWORD` | backend | match `docker-compose.yml` | Database credentials; **always override in production** |
 | `DB_POOL_SIZE` | backend | `10` | Max connection pool size |
+| `COGNITO_REGION` | backend + frontend | `us-east-1` | User pool region |
+| `COGNITO_USER_POOL_ID` | backend | (placeholder) | e.g. `us-east-1_AbC123` |
+| `COGNITO_CLIENT_IDS` | backend | (placeholder) | Comma-separated app client ids whose tokens are accepted |
 | `API_BASE_URL` | frontend (server only) | `http://localhost:8080` | Where the Next.js server reaches the API |
+| `APP_URL` | frontend (server only) | (none) | Public URL of the site, e.g. `http://localhost:3000` |
+| `COGNITO_CLIENT_ID` / `COGNITO_CLIENT_SECRET` | frontend (server only) | (none) | App client credentials |
+| `COGNITO_DOMAIN` | frontend (server only) | (none) | e.g. `https://duelyard.auth.us-east-1.amazoncognito.com` |
+
+Without the Cognito variables the site still runs; sign-in pages show a "not configured" notice.
 
 ## Database
 
@@ -85,15 +93,71 @@ migration; add a new `V<n>__description.sql` instead.
 | `match_events` | Ordered, unique-sequence event log per match with JSONB payloads |
 | `friendships` / `game_invitations` | Future features (schema only) |
 
+## Authentication
+
+```
+Browser ──(HttpOnly cookies)──> Next.js server ──(Bearer access token)──> Spring Boot API
+                                   │                                          │
+                                   └── Cognito user-pool API / OAuth ─────────┘ (JWKS, GetUser)
+```
+
+- The browser never sees a token. The Next.js server signs users in with Cognito and stores the
+  access and refresh tokens in `HttpOnly`, `SameSite=Lax` cookies (`Secure` with the `__Host-`
+  prefix in production).
+- `src/proxy.ts` refreshes the access token shortly before it expires using the refresh token, so
+  sessions last until the refresh token expires (30 days) or the user signs out.
+- Sign-out revokes the refresh token at Cognito, clears the cookies and ends the Cognito
+  managed-login session.
+- Spring Boot validates every access token: signature (pool JWKS), issuer, expiry,
+  `token_use=access` and `client_id`. On a user's first request it creates their account and a
+  1000 rating in every game. Google users get a username derived from their email.
+
+### Cognito setup (one-time)
+
+Scripted (recommended), with the AWS CLI signed in to your account:
+
+```bash
+AWS_REGION=us-east-1 infra/cognito/setup-cognito.sh dev   # user pool, domain, app client, local .env files
+# create the Google OAuth client (redirect URI is printed above), then:
+cp infra/cognito/.env.google.example infra/cognito/.env.google   # fill in; gitignored
+infra/cognito/add-google.sh dev
+```
+
+Both scripts are safe to re-run. What they configure, if you prefer the AWS console:
+
+
+1. **User pool**: create one with application type *Traditional web application*.
+   - Sign-in identifiers: **Username** and **Email**. Self-registration on, required attribute
+     `email`, Cognito-assisted email verification.
+   - Password policy: minimum 8, require uppercase, lowercase, number and symbol (the default).
+   - Keep usernames case-insensitive and "prevent user existence errors" enabled (defaults).
+2. **App client** (generated with a client secret):
+   - Auth flows: `ALLOW_USER_PASSWORD_AUTH`, `ALLOW_REFRESH_TOKEN_AUTH`. Token revocation enabled.
+     Refresh token rotation **off**.
+   - Token lifetimes: access 60 minutes, refresh 30 days.
+   - Managed login: callback URL `http://localhost:3000/auth/callback`, sign-out URL
+     `http://localhost:3000/` (add your production URLs too). Grant type *Authorization code*.
+     Scopes `openid`, `email`, `profile`, `aws.cognito.signin.user.admin`.
+3. **Domain**: create a Cognito domain (this becomes `COGNITO_DOMAIN`).
+4. **Google**: in Google Cloud Console create an OAuth client (Web application) with authorized
+   redirect URI `https://<your-cognito-domain>/oauth2/idpresponse`. In Cognito, add Google as a
+   social provider with that client id/secret, scopes `openid email profile`, and map
+   `email` → `email` and `email_verified` → `email_verified`. Enable Google on the app client.
+5. **Email**: the default Cognito sender is limited to a few emails per day; configure Amazon SES
+   before launch.
+6. Put the values in `frontend/.env.local` and the backend environment.
+
 ## API
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
 | GET | `/api/games` | public | List all games |
 | GET | `/api/games/{slug}` | public | One game; 404 problem response if unknown |
+| GET | `/api/users/me` | bearer | The caller's account (created on first call) |
+| GET | `/api/users/username-availability?username=` | public | Format and availability check |
 | GET | `/actuator/health` | public | Health check |
 
-Every other route requires authentication (returns 401 until Cognito is wired up in Phase 3).
+Every other route requires a valid Cognito access token.
 
 ## Adding a game
 

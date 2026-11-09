@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.duelyard.auth.CognitoUnavailableException;
+
 /**
  * Translates exceptions into RFC 9457 problem responses. Framework exceptions (validation,
  * malformed bodies, unsupported methods) are handled by the {@link ResponseEntityExceptionHandler}
@@ -23,6 +25,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail handleNotFound(NotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(CognitoUnavailableException.class)
+    ProblemDetail handleCognitoUnavailable(CognitoUnavailableException ex) {
+        log.warn("Cognito unavailable: {}", ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+            "Account service is temporarily unavailable. Please try again.");
     }
 
     @ExceptionHandler(Exception.class)

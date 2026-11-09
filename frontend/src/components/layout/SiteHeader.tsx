@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { LinkButton } from "@/components/ui/Button";
+import { Suspense } from "react";
 import { Logo } from "@/components/ui/Logo";
+import { SessionControls } from "./SessionControls";
 
 const NAV = [
   { href: "/#games", label: "Games" },
@@ -25,14 +26,9 @@ export function SiteHeader() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
-          <LinkButton href="/login" variant="ghost" size="sm">
-            Sign in
-          </LinkButton>
-          <LinkButton href="/register" size="sm">
-            Register
-          </LinkButton>
-        </div>
+        <Suspense fallback={<div className="h-9 w-40" aria-hidden />}>
+          <SessionControls />
+        </Suspense>
       </div>
     </header>
   );

@@ -5,8 +5,8 @@ import type { ProblemDetail } from "@/types/api";
  * Server-side client for the Spring Boot API.
  *
  * API_BASE_URL is intentionally not prefixed with NEXT_PUBLIC_: it is only read on the server,
- * so it never ships to the browser. In Phase 3 this client will attach the user's access token
- * (read from an HttpOnly cookie) as a bearer token.
+ * so it never ships to the browser. Authenticated calls pass the user's access token (read from
+ * an HttpOnly cookie by the caller) as a bearer token.
  */
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 5000;
@@ -21,11 +21,18 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+export interface ApiRequestOptions {
+  accessToken?: string;
+}
+
+export async function apiGet<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (options.accessToken) headers.Authorization = `Bearer ${options.accessToken}`;
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { Accept: "application/json" },
+      headers,
       cache: "no-store",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
