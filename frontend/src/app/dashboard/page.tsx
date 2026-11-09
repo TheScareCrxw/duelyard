@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PlayerAvatar } from "@/components/player/PlayerAvatar";
 import { ProfileStats } from "@/components/player/ProfileStats";
 import { LinkButton } from "@/components/ui/Button";
+import { GAME_PRESENTATIONS } from "@/games/registry";
 import { getAccessToken, requireUser } from "@/lib/auth/dal";
 import { getPlayerProfile } from "@/services/playerService";
 import { loadRatingHistories } from "@/services/ratingHistories";
@@ -33,12 +34,30 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <section aria-labelledby="quick-play" className="mt-8">
+        <h2 id="quick-play" className="text-xs font-semibold tracking-[0.18em] text-muted uppercase">
+          Quick play · ranked
+        </h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {GAME_PRESENTATIONS.map(({ slug, displayName, Icon, accent }) => (
+            <Link
+              key={slug}
+              href={`/play/${slug}?mode=RANKED`}
+              className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-semibold transition-colors hover:border-faint"
+            >
+              <Icon className="h-5 w-5 shrink-0" style={{ color: accent }} />
+              <span className="truncate">{displayName}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <div className="mt-10">
         {profile ? (
           <ProfileStats
             profile={profile}
             ratingHistories={ratingHistories}
-            emptyMatches="No matches yet. Ranked play opens soon."
+            emptyMatches="No matches yet. Pick a game above to play your first."
           />
         ) : (
           <p className="text-sm text-muted">

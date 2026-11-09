@@ -23,14 +23,14 @@ export const GAME_PRESENTATIONS: readonly GamePresentation[] = [
     displayName: "Darts",
     accent: "var(--color-darts)",
     Icon: DartsIcon,
-    blurb: "Turn-based 501. Three darts per turn, finish on a double.",
+    blurb: "301 down to exactly zero. Three darts a turn; time your release to tighten your grouping.",
   },
   {
     slug: "mini-golf",
     displayName: "Mini Golf",
     accent: "var(--color-golf)",
     Icon: MiniGolfIcon,
-    blurb: "Physics-driven holes with ramps, walls and moving hazards.",
+    blurb: "Three holes of banks and bumpers. Alternate putts; fewest strokes wins.",
   },
   {
     slug: "eight-ball",
@@ -44,7 +44,7 @@ export const GAME_PRESENTATIONS: readonly GamePresentation[] = [
     displayName: "Rocket Launcher",
     accent: "var(--color-rocket)",
     Icon: RocketIcon,
-    blurb: "Artillery duel over destructible terrain. Last one standing.",
+    blurb: "Artillery duel over destructible terrain, with wind that changes every turn.",
   },
 ];
 

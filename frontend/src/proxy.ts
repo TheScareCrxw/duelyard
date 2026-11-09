@@ -16,7 +16,7 @@ import { isTokenExpired } from "@/lib/auth/tokens";
  */
 
 // /profile/<username> is public; /profile itself redirects to your own profile (checked in the page).
-const PROTECTED_PREFIXES = ["/dashboard", "/play", "/settings"];
+const PROTECTED_PREFIXES = ["/dashboard", "/play", "/match", "/settings"];
 const GUEST_ONLY = ["/login", "/register"];
 /** Refresh a little early so a token never expires mid-request. */
 const REFRESH_SKEW_SECONDS = 60;

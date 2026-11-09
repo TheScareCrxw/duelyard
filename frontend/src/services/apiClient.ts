@@ -75,3 +75,7 @@ export function apiGet<T>(path: string, options: ApiRequestOptions = {}): Promis
 export function apiPatch<T>(path: string, body: unknown, options: ApiRequestOptions = {}): Promise<T> {
   return request<T>("PATCH", path, body, options);
 }
+
+export function apiPost<T>(path: string, body: unknown, options: ApiRequestOptions = {}): Promise<T> {
+  return request<T>("POST", path, body, options);
+}

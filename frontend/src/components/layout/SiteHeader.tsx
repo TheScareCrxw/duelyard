@@ -4,7 +4,7 @@ import { Logo } from "@/components/ui/Logo";
 import { SessionControls } from "./SessionControls";
 
 const NAV = [
-  { href: "/#games", label: "Games" },
+  { href: "/play", label: "Play" },
   { href: "/leaderboards", label: "Leaderboards" },
 ];
 
