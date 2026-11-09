@@ -95,6 +95,16 @@ migration; add a new `V<n>__description.sql` instead.
 | `match_events` | Ordered, unique-sequence event log per match with JSONB payloads |
 | `friendships` / `game_invitations` | Future features (schema only) |
 
+## Ratings
+
+Every game has its own Elo rating (start 1000, K = 32, win/draw/loss = 1/0.5/0). Matches end
+only through `MatchCompletionService.complete(...)`, which game modules call once the server has
+decided the outcome. In a single transaction holding a row lock on the match it records results,
+updates ratings, peak ratings and W/L/D, and writes one `rating_history` row per player. Ranked
+changes are zero-sum (rounding is symmetric). Casual matches update W/L/D only. Completing an
+already-completed match is a no-op, and the database rejects a second rating change per player
+per match.
+
 ## Authentication
 
 ```
@@ -166,6 +176,7 @@ Both scripts are safe to re-run. What they configure, if you prefer the AWS cons
 | GET | `/api/users/username-availability?username=` | public | Format, reserved-name and availability check |
 | GET | `/api/players/{username}` | public | Profile: ratings, totals, recent matches (stats hidden if private, except to the owner) |
 | GET | `/api/players/{username}/matches?page=&size=` | public | Paginated match history (403 if private) |
+| GET | `/api/players/{username}/rating-history?game=&limit=` | public | Rating after each ranked match, oldest first (403 if private) |
 | GET | `/actuator/health` | public | Health check |
 
 Every other route requires a valid Cognito access token.

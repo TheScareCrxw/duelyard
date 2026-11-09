@@ -1,10 +1,20 @@
 import { GameRatingCard } from "@/components/stats/GameRatingCard";
 import { MatchHistoryList } from "@/components/stats/MatchHistoryList";
+import { RatingHistoryPanel } from "@/components/stats/RatingHistoryPanel";
 import { StatTile, formatWinRate } from "@/components/stats/StatTile";
-import type { PlayerProfile } from "@/types/player";
+import type { PlayerProfile, RatingHistory } from "@/types/player";
 
 /** Summary tiles, per-game ratings and recent matches. Used by the profile page and dashboard. */
-export function ProfileStats({ profile, emptyMatches }: { profile: PlayerProfile; emptyMatches: string }) {
+export function ProfileStats({
+  profile,
+  emptyMatches,
+  ratingHistories,
+}: {
+  profile: PlayerProfile;
+  emptyMatches: string;
+  /** Omitted when the history couldn't be loaded; the section is then skipped. */
+  ratingHistories?: { gameName: string; history: RatingHistory }[];
+}) {
   const { summary, ratings, recentMatches } = profile;
   if (!summary || !ratings || !recentMatches) return null;
 
@@ -32,6 +42,17 @@ export function ProfileStats({ profile, emptyMatches }: { profile: PlayerProfile
           ))}
         </div>
       </section>
+
+      {ratingHistories && (
+        <section aria-labelledby="rating-history">
+          <h2 id="rating-history" className="text-xs font-semibold tracking-[0.18em] text-muted uppercase">
+            Rating history
+          </h2>
+          <div className="mt-4">
+            <RatingHistoryPanel histories={ratingHistories} />
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="recent">
         <h2 id="recent" className="text-xs font-semibold tracking-[0.18em] text-muted uppercase">

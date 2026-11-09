@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.duelyard.game.Game;
+import com.duelyard.match.MatchResult;
 import com.duelyard.user.User;
 
 import jakarta.persistence.Column;
@@ -101,5 +102,25 @@ public class PlayerGameStats {
 
     public int getRankedGamesPlayed() {
         return rankedWins + rankedLosses + rankedDraws;
+    }
+
+    /** Applies a ranked result: new rating, peak and ranked record. */
+    public void recordRanked(MatchResult result, int newRating) {
+        this.rating = newRating;
+        this.peakRating = Math.max(peakRating, newRating);
+        switch (result) {
+            case WIN -> rankedWins++;
+            case LOSS -> rankedLosses++;
+            case DRAW -> rankedDraws++;
+        }
+    }
+
+    /** Applies a casual result: record only, rating untouched. */
+    public void recordCasual(MatchResult result) {
+        switch (result) {
+            case WIN -> casualWins++;
+            case LOSS -> casualLosses++;
+            case DRAW -> casualDraws++;
+        }
     }
 }

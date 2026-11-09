@@ -36,6 +36,10 @@ public final class TestAccounts {
     /** Deletes this run's users and any matches they took part in. */
     public void cleanUp(JdbcTemplate jdbc) {
         String like = prefix + "%";
+        String theirMatches = """
+            SELECT mp.match_id FROM match_players mp JOIN users u ON u.id = mp.user_id WHERE u.cognito_sub LIKE ?""";
+        // rating_history deliberately has no ON DELETE CASCADE from matches, so remove it first.
+        jdbc.update("DELETE FROM rating_history WHERE match_id IN (" + theirMatches + ")", like);
         jdbc.update("""
             DELETE FROM matches WHERE id IN (
               SELECT mp.match_id FROM match_players mp JOIN users u ON u.id = mp.user_id WHERE u.cognito_sub LIKE ?)

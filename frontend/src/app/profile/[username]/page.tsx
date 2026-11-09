@@ -5,6 +5,7 @@ import { ProfileStats } from "@/components/player/ProfileStats";
 import { LinkButton } from "@/components/ui/Button";
 import { getAccessToken } from "@/lib/auth/dal";
 import { getPlayerProfile } from "@/services/playerService";
+import { loadRatingHistories } from "@/services/ratingHistories";
 
 type Params = Promise<{ username: string }>;
 
@@ -16,8 +17,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 /** Public profile. Signed-in owners see their own profile even when it's private. */
 export default async function ProfilePage({ params }: { params: Params }) {
   const { username } = await params;
-  const profile = await getPlayerProfile(decodeURIComponent(username), await getAccessToken());
+  const accessToken = await getAccessToken();
+  const profile = await getPlayerProfile(decodeURIComponent(username), accessToken);
   if (!profile) notFound();
+  const ratingHistories = await loadRatingHistories(profile, accessToken);
 
   const joined = new Date(profile.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
@@ -55,6 +58,7 @@ export default async function ProfilePage({ params }: { params: Params }) {
         ) : (
           <ProfileStats
             profile={profile}
+            ratingHistories={ratingHistories}
             emptyMatches={profile.self ? "You haven't played any matches yet." : `${profile.username} hasn't played any matches yet.`}
           />
         )}

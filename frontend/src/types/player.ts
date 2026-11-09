@@ -74,3 +74,11 @@ export interface MatchHistoryPage {
   size: number;
   hasMore: boolean;
 }
+
+/** Response of GET /api/players/{username}/rating-history: oldest point first. */
+export interface RatingHistory {
+  gameSlug: string;
+  /** Rating before the first point. */
+  initialRating: number;
+  points: { matchId: string; at: string; rating: number; change: number }[];
+}

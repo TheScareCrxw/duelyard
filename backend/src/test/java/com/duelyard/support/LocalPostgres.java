@@ -27,6 +27,15 @@ public final class LocalPostgres {
 
     public static void main(String[] args) throws Exception {
         Path dataDir = Path.of("target", "local-postgres").toAbsolutePath();
+        // A half-created directory (no PG_VERSION, e.g. after an interrupted first start) can't be
+        // initialized into; it holds no data, so clear it.
+        if (Files.isDirectory(dataDir) && !Files.exists(dataDir.resolve("PG_VERSION"))) {
+            try (var leftovers = Files.walk(dataDir)) {
+                leftovers.sorted(java.util.Comparator.reverseOrder())
+                    .filter(p -> !p.equals(dataDir))
+                    .forEach(p -> p.toFile().delete());
+            }
+        }
         Files.createDirectories(dataDir);
 
         EmbeddedPostgres postgres = EmbeddedPostgres.builder()

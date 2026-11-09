@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.duelyard.match.dto.MatchHistoryPage;
+import com.duelyard.rating.dto.RatingHistoryResponse;
 import com.duelyard.user.dto.PlayerProfileResponse;
 
 /**
@@ -37,5 +38,14 @@ public class PlayerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return profiles.matches(username, viewer, page, size);
+    }
+
+    @GetMapping("/{username}/rating-history")
+    public RatingHistoryResponse ratingHistory(
+            @PathVariable String username,
+            @AuthenticationPrincipal Jwt viewer,
+            @RequestParam String game,
+            @RequestParam(defaultValue = "100") int limit) {
+        return profiles.ratingHistory(username, viewer, game, limit);
     }
 }

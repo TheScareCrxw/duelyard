@@ -5,12 +5,15 @@ import { ProfileStats } from "@/components/player/ProfileStats";
 import { LinkButton } from "@/components/ui/Button";
 import { getAccessToken, requireUser } from "@/lib/auth/dal";
 import { getPlayerProfile } from "@/services/playerService";
+import { loadRatingHistories } from "@/services/ratingHistories";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
-  const profile = await getPlayerProfile(user.username, await getAccessToken());
+  const accessToken = await getAccessToken();
+  const profile = await getPlayerProfile(user.username, accessToken);
+  const ratingHistories = profile ? await loadRatingHistories(profile, accessToken) : undefined;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
@@ -32,7 +35,11 @@ export default async function DashboardPage() {
 
       <div className="mt-10">
         {profile ? (
-          <ProfileStats profile={profile} emptyMatches="No matches yet. Ranked play opens soon." />
+          <ProfileStats
+            profile={profile}
+            ratingHistories={ratingHistories}
+            emptyMatches="No matches yet. Ranked play opens soon."
+          />
         ) : (
           <p className="text-sm text-muted">
             Your stats are unavailable right now. <Link href="/dashboard" className="text-volt">Retry</Link>
