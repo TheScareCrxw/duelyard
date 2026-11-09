@@ -105,6 +105,10 @@ changes are zero-sum (rounding is symmetric). Casual matches update W/L/D only. 
 already-completed match is a no-op, and the database rejects a second rating change per player
 per match.
 
+Leaderboards list players with at least one ranked match. The overall board ranks by the average
+of a player's four game ratings (an unplayed game counts as 1000), so it rewards all-round play.
+Ranks are computed in SQL with `RANK()` before search and paging are applied.
+
 ## Authentication
 
 ```
@@ -177,6 +181,7 @@ Both scripts are safe to re-run. What they configure, if you prefer the AWS cons
 | GET | `/api/players/{username}` | public | Profile: ratings, totals, recent matches (stats hidden if private, except to the owner) |
 | GET | `/api/players/{username}/matches?page=&size=` | public | Paginated match history (403 if private) |
 | GET | `/api/players/{username}/rating-history?game=&limit=` | public | Rating after each ranked match, oldest first (403 if private) |
+| GET | `/api/leaderboards/{global\|gameSlug}?search=&page=&size=` | public | Ranked players with true ranks (ties share a rank); `viewer` holds the signed-in caller's row |
 | GET | `/actuator/health` | public | Health check |
 
 Every other route requires a valid Cognito access token.

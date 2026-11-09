@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/games", "/api/games/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/username-availability").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/players/*", "/api/players/*/matches", "/api/players/*/rating-history").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/leaderboards/*").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated());

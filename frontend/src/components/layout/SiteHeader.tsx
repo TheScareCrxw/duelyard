@@ -5,7 +5,7 @@ import { SessionControls } from "./SessionControls";
 
 const NAV = [
   { href: "/#games", label: "Games" },
-  { href: "/#rankings", label: "Rankings" },
+  { href: "/leaderboards", label: "Leaderboards" },
 ];
 
 export function SiteHeader() {
