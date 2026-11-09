@@ -7,26 +7,15 @@ import { FormAlert } from "./FormAlert";
 import { FormField } from "./FormField";
 import { SubmitButton } from "./SubmitButton";
 
-export function VerifyForm({ username }: { username?: string }) {
+/** The account being verified comes from the pending sign-up cookie, not the form. */
+export function VerifyForm() {
   const [state, action] = useActionState(verifyAction, initialAuthFormState);
   const [resendState, resend] = useActionState(resendCodeAction, initialAuthFormState);
-  const errors = state.fieldErrors ?? {};
-  const currentUsername = state.values?.username ?? resendState.values?.username ?? username;
 
   return (
     <div className="space-y-6">
       <form action={action} className="space-y-4" noValidate>
         {state.error && <FormAlert tone="error">{state.error}</FormAlert>}
-        <FormField
-          name="username"
-          label="Username"
-          autoComplete="username"
-          autoCapitalize="none"
-          required
-          defaultValue={currentUsername}
-          readOnly={Boolean(username)}
-          error={errors.username}
-        />
         <FormField
           name="code"
           label="Verification code"
@@ -35,17 +24,16 @@ export function VerifyForm({ username }: { username?: string }) {
           pattern="[0-9]{6}"
           maxLength={6}
           placeholder="123456"
+          autoFocus
           required
-          error={errors.code}
+          error={state.fieldErrors?.code}
         />
         <SubmitButton pendingLabel="Verifying…">Verify email</SubmitButton>
       </form>
 
       <form action={resend} className="space-y-3 border-t border-line pt-5">
-        <input type="hidden" name="username" value={currentUsername ?? ""} />
         {resendState.message && <FormAlert tone="success">{resendState.message}</FormAlert>}
         {resendState.error && <FormAlert tone="error">{resendState.error}</FormAlert>}
-        {resendState.fieldErrors?.username && <FormAlert tone="error">{resendState.fieldErrors.username}</FormAlert>}
         <p className="text-sm text-muted">Didn&apos;t get it? Check your spam folder, or</p>
         <SubmitButton pendingLabel="Sending…" variant="secondary">
           Send a new code

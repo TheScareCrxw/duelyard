@@ -5,6 +5,7 @@ import { FormAlert } from "@/components/auth/FormAlert";
 import { GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { isAuthConfigured } from "@/lib/auth/config";
+import { readPendingSignup } from "@/lib/auth/pendingSignup";
 import { safeNextPath } from "@/lib/auth/redirect";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -23,6 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
   const one = (key: string) => (typeof params[key] === "string" ? (params[key] as string) : undefined);
   const next = safeNextPath(one("next"));
   const error = ERRORS[one("error") ?? ""];
+  const identifier = one("identifier") ?? (await readPendingSignup())?.username;
 
   return (
     <AuthShell
@@ -50,7 +52,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       <div className="mt-4">
         <GoogleButton next={next} />
         <OrDivider />
-        <LoginForm next={next} identifier={one("identifier")} />
+        <LoginForm next={next} identifier={identifier} />
       </div>
     </AuthShell>
   );

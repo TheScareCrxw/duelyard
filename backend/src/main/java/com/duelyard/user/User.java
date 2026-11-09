@@ -45,6 +45,9 @@ public class User {
     @Column(name = "profile_visibility", nullable = false, length = 16)
     private ProfileVisibility profileVisibility = ProfileVisibility.PUBLIC;
 
+    @Column(name = "username_changed_at")
+    private Instant usernameChangedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -71,11 +74,14 @@ public class User {
     public String getEmail() { return email; }
     public String getAvatarUrl() { return avatarUrl; }
     public ProfileVisibility getProfileVisibility() { return profileVisibility; }
+    public Instant getUsernameChangedAt() { return usernameChangedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
-    public void changeUsername(String username) {
+    /** A player-initiated rename; recorded so renames can be rate-limited. */
+    public void rename(String username, Instant now) {
         this.username = Objects.requireNonNull(username, "username");
+        this.usernameChangedAt = Objects.requireNonNull(now, "now");
     }
 
     public void changeEmail(String email) {

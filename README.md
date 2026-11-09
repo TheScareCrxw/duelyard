@@ -38,6 +38,8 @@ Tests do **not** need Docker: they start a real embedded PostgreSQL 18 automatic
 ```bash
 # 1. Infrastructure: the backend won't start without PostgreSQL
 docker compose up -d
+#    No Docker? Run a real PostgreSQL 18 from the backend's test classpath instead (same settings):
+#    cd backend && ./mvnw test-compile exec:java -Dexec.mainClass=com.duelyard.support.LocalPostgres -Dexec.classpathScope=test
 
 # 2. Backend: http://localhost:8080
 cd backend
@@ -108,6 +110,12 @@ Browser ──(HttpOnly cookies)──> Next.js server ──(Bearer access toke
   sessions last until the refresh token expires (30 days) or the user signs out.
 - Sign-out revokes the refresh token at Cognito, clears the cookies and ends the Cognito
   managed-login session.
+- Players sign in with their **username or email**. The Cognito username is a hidden random id;
+  the visible username is Cognito's `preferred_username` alias, which the backend claims when the
+  account is created and updates on every rename (renames: once per 30 days). The name chosen at
+  sign-up travels in `custom:desired_username`, because Cognito can't set an alias before the
+  account is confirmed. Until the first sign-in, Cognito only knows the email; the sign-in form
+  covers this on the device that registered.
 - Spring Boot validates every access token: signature (pool JWKS), issuer, expiry,
   `token_use=access` and `client_id`. On a user's first request it creates their account and a
   1000 rating in every game. Google users get a username derived from their email.
@@ -154,7 +162,10 @@ Both scripts are safe to re-run. What they configure, if you prefer the AWS cons
 | GET | `/api/games` | public | List all games |
 | GET | `/api/games/{slug}` | public | One game; 404 problem response if unknown |
 | GET | `/api/users/me` | bearer | The caller's account (created on first call) |
-| GET | `/api/users/username-availability?username=` | public | Format and availability check |
+| PATCH | `/api/users/me` | bearer | Change username, avatar (`preset:<emblem>:<color>`) and/or profile visibility |
+| GET | `/api/users/username-availability?username=` | public | Format, reserved-name and availability check |
+| GET | `/api/players/{username}` | public | Profile: ratings, totals, recent matches (stats hidden if private, except to the owner) |
+| GET | `/api/players/{username}/matches?page=&size=` | public | Paginated match history (403 if private) |
 | GET | `/actuator/health` | public | Health check |
 
 Every other route requires a valid Cognito access token.

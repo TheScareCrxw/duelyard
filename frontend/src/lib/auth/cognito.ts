@@ -64,14 +64,28 @@ function hashFor(config: AuthConfig, username: string): string {
   return secretHash(username, config.clientId, config.clientSecret);
 }
 
-export async function signUp(username: string, email: string, password: string): Promise<CodeDelivery> {
+/**
+ * Creates an unconfirmed account. The Cognito username is an opaque id the player never sees;
+ * they sign in with their app username (the preferred_username alias, which the backend claims on
+ * first sign-in) or their email. Cognito doesn't allow setting an alias before confirmation, so
+ * the chosen username travels in custom:desired_username.
+ */
+export async function signUp(
+  cognitoUsername: string,
+  desiredUsername: string,
+  email: string,
+  password: string,
+): Promise<CodeDelivery> {
   const config = requireAuthConfig();
   const result = await callCognito<{ CodeDeliveryDetails?: { Destination?: string } }>(config, "SignUp", {
     ClientId: config.clientId,
-    SecretHash: hashFor(config, username),
-    Username: username,
+    SecretHash: hashFor(config, cognitoUsername),
+    Username: cognitoUsername,
     Password: password,
-    UserAttributes: [{ Name: "email", Value: email }],
+    UserAttributes: [
+      { Name: "email", Value: email },
+      { Name: "custom:desired_username", Value: desiredUsername },
+    ],
   });
   return { destination: result.CodeDeliveryDetails?.Destination };
 }

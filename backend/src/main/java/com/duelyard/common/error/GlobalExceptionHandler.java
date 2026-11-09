@@ -27,6 +27,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(ApiException.class)
+    ProblemDetail handleApi(ApiException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.getMessage());
+        problem.setProperty("code", ex.code());
+        ex.properties().forEach(problem::setProperty);
+        return problem;
+    }
+
     @ExceptionHandler(CognitoUnavailableException.class)
     ProblemDetail handleCognitoUnavailable(CognitoUnavailableException ex) {
         log.warn("Cognito unavailable: {}", ex.getMessage());

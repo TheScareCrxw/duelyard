@@ -2,6 +2,7 @@ package com.duelyard.user;
 
 import java.security.SecureRandom;
 import java.util.Locale;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 import java.util.regex.Pattern;
 
@@ -19,6 +20,11 @@ public final class UsernamePolicy {
     private static final Pattern INVALID_CHARS = Pattern.compile("[^A-Za-z0-9_]");
     private static final int SUFFIX_DIGITS = 4;
 
+    /** Names that could be mistaken for staff or system accounts. Compared case-insensitively. */
+    private static final Set<String> RESERVED = Set.of(
+        "admin", "administrator", "root", "system", "support", "help", "staff", "moderator", "mod",
+        "duelyard", "official", "security", "null", "undefined", "anonymous", "deleted", "me", "settings");
+
     private final RandomGenerator random;
 
     public UsernamePolicy() {
@@ -33,6 +39,15 @@ public final class UsernamePolicy {
         return username != null && VALID.matcher(username).matches();
     }
 
+    public static boolean isReserved(String username) {
+        return username != null && RESERVED.contains(username.toLowerCase(Locale.ROOT));
+    }
+
+    /** Valid format and not reserved: acceptable as a player's username. */
+    public static boolean isAllowed(String username) {
+        return isValid(username) && !isReserved(username);
+    }
+
     /** Turns arbitrary text (e.g. an email local part) into a valid base username. */
     public static String sanitize(String raw) {
         String cleaned = INVALID_CHARS.matcher(raw == null ? "" : raw).replaceAll("_");
@@ -40,7 +55,7 @@ public final class UsernamePolicy {
         if (cleaned.length() > MAX_LENGTH) {
             cleaned = cleaned.substring(0, MAX_LENGTH);
         }
-        if (cleaned.length() < MIN_LENGTH) {
+        if (cleaned.length() < MIN_LENGTH || isReserved(cleaned)) {
             cleaned = "player";
         }
         return cleaned;

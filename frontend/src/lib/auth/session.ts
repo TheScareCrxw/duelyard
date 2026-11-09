@@ -13,6 +13,7 @@ const prefix = isProduction ? "__Host-" : "";
 export const ACCESS_COOKIE = `${prefix}dy_at`;
 export const REFRESH_COOKIE = `${prefix}dy_rt`;
 export const OAUTH_COOKIE = `${prefix}dy_oauth`;
+export const SIGNUP_COOKIE = `${prefix}dy_signup`;
 
 /** Matches the refresh token validity configured on the Cognito app client. */
 export const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30;

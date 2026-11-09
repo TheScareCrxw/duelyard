@@ -41,6 +41,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/games", "/api/games/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/username-availability").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/players/*", "/api/players/*/matches").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated());

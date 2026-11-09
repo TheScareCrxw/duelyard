@@ -11,6 +11,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.duelyard.auth.CognitoAliasTakenException;
 import com.duelyard.auth.CognitoUnavailableException;
 import com.duelyard.auth.CognitoUserInfo;
 import com.duelyard.auth.CognitoUserInfoClient;
@@ -22,9 +23,12 @@ import com.duelyard.rating.PlayerGameStatsRepository;
  * Maps an authenticated Cognito identity to an application {@link User}, creating the account
  * (and a starting rating for every game) the first time an identity is seen.
  *
+ * <p>Creating an account also claims the player's username as their Cognito
+ * {@code preferred_username} sign-in alias, in the same transaction: if Cognito refuses, the
+ * account isn't created and another name is tried.
+ *
  * <p>Safe under concurrency: if two first requests for the same identity race, the unique
- * constraint on {@code cognito_sub} lets exactly one insert win and the other re-reads it. A
- * username taken concurrently by someone else is retried with a generated alternative.
+ * constraint on {@code cognito_sub} lets exactly one insert win and the other re-reads it.
  */
 @Service
 public class UserProvisioningService {
@@ -72,7 +76,7 @@ public class UserProvisioningService {
                 ? preferred
                 : usernamePolicy.withRandomSuffix(preferred);
             try {
-                User created = newTransaction.execute(status -> create(sub, candidate, info.email()));
+                User created = newTransaction.execute(status -> create(sub, candidate, info.email(), jwt.getTokenValue()));
                 log.info("Provisioned user id={} username={} federated={}", created.getId(), candidate, info.federated());
                 return created;
             } catch (DataIntegrityViolationException e) {
@@ -81,25 +85,29 @@ public class UserProvisioningService {
                     return raced.get();
                 }
                 // Otherwise the username was taken concurrently; try another.
+            } catch (CognitoAliasTakenException e) {
+                log.warn("Cognito alias '{}' already taken; trying another username", candidate);
             }
         }
         throw new IllegalStateException("Could not allocate a username for Cognito user " + sub);
     }
 
-    private User create(String sub, String username, String email) {
+    private User create(String sub, String username, String email, String accessToken) {
         User user = users.saveAndFlush(new User(sub, username, email));
         games.findAll().forEach(game -> stats.save(new PlayerGameStats(user, game)));
         stats.flush();
+        // Last, so a database failure never leaves an alias claimed for an account that doesn't exist.
+        cognito.setPreferredUsername(accessToken, username);
         return user;
     }
 
     /**
-     * Native accounts keep the username they registered with (the registration form enforces the
-     * same rules). Federated accounts get one derived from their email address.
+     * The username chosen at sign-up if it's usable, otherwise one derived from the email address
+     * (Google sign-ins, or a chosen name that has since become invalid).
      */
-    private static String preferredUsername(CognitoUserInfo info) {
-        if (!info.federated() && UsernamePolicy.isValid(info.username())) {
-            return info.username();
+    static String preferredUsername(CognitoUserInfo info) {
+        if (UsernamePolicy.isAllowed(info.desiredUsername())) {
+            return info.desiredUsername();
         }
         String localPart = info.email().substring(0, Math.max(0, info.email().indexOf('@')));
         return UsernamePolicy.sanitize(localPart);
