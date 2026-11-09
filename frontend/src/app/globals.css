@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Design tokens. The app is dark-only by design. */
+@theme {
+  --color-base: #07080c;
+  --color-surface: #0d0f16;
+  --color-raised: #151824;
+  --color-line: #232738;
+  --color-fg: #eef0f6;
+  --color-muted: #8a90a6;
+  --color-faint: #5a6078;
+
+  /* Brand accent */
+  --color-volt: #c8ff3d;
+  --color-volt-dim: #9fcc2f;
+
+  /* Per-game accents */
+  --color-darts: #ff4d6a;
+  --color-golf: #34d27b;
+  --color-pool: #4f8dff;
+  --color-rocket: #ffae2b;
+
+  /* Status */
+  --color-win: #34d27b;
+  --color-loss: #ff4d6a;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-chakra);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-volt) 35%, transparent);
+}
+
+/* Faint grid used behind hero sections. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-line) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-line) 55%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

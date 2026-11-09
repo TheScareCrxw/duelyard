@@ -1,0 +1,37 @@
+# Local development infrastructure. Start with: docker compose up -d
+# Credentials here are for local development only; production uses AWS-managed services and secrets.
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: duelyard-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-duelyard}
+      POSTGRES_USER: ${POSTGRES_USER:-duelyard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-duelyard_local}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: duelyard-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:
