@@ -11,6 +11,26 @@ spring:
     error:
       include-stacktrace: never
       include-message: never
+  datasource:
+    # Defaults match docker-compose.yml for local development. Production MUST override all three.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/duelyard}
+    username: ${DB_USERNAME:duelyard}
+    password: ${DB_PASSWORD:duelyard_local}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 5000
+  jpa:
+    # Never lazily load entities while rendering a response; services must return DTOs.
+    open-in-view: false
+    hibernate:
+      # Schema is owned by Flyway; Hibernate only checks that entities match it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
   autoconfigure:
     # No in-memory users: authentication will come exclusively from Cognito JWTs (Phase 3).
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration

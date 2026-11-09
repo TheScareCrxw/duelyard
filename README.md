@@ -29,12 +29,14 @@ docker-compose.yml  Local PostgreSQL and Redis
 
 - Java 25
 - Node.js 20.9 or newer
-- Docker Desktop (needed from Phase 2 onward for PostgreSQL and Redis)
+- Docker Desktop to run PostgreSQL and Redis locally (or your own PostgreSQL 18 matching the `DB_*` settings below)
+
+Tests do **not** need Docker: they start a real embedded PostgreSQL 18 automatically.
 
 ## Running locally
 
 ```bash
-# 1. Infrastructure (from Phase 2 onward)
+# 1. Infrastructure: the backend won't start without PostgreSQL
 docker compose up -d
 
 # 2. Backend: http://localhost:8080
@@ -62,7 +64,26 @@ cd frontend && npm run lint && npx tsc --noEmit && npm run build
 | `SERVER_PORT` | backend | `8080` | API port |
 | `APP_CORS_ALLOWED_ORIGINS` | backend | `http://localhost:3000` | Comma-separated browser origins allowed to call the API |
 | `APP_LOG_LEVEL` | backend | `INFO` | Log level for `com.duelyard` |
+| `DB_URL` | backend | `jdbc:postgresql://localhost:5432/duelyard` | JDBC URL |
+| `DB_USERNAME` / `DB_PASSWORD` | backend | match `docker-compose.yml` | Database credentials; **always override in production** |
+| `DB_POOL_SIZE` | backend | `10` | Max connection pool size |
 | `API_BASE_URL` | frontend (server only) | `http://localhost:8080` | Where the Next.js server reaches the API |
+
+## Database
+
+The schema is owned by Flyway migrations in `backend/src/main/resources/db/migration`. Hibernate runs
+with `ddl-auto: validate`, so startup fails if entities and schema drift apart. Never edit an applied
+migration; add a new `V<n>__description.sql` instead.
+
+| Table | Purpose |
+| --- | --- |
+| `users` | Accounts linked to Cognito by unique `cognito_sub`; usernames unique case-insensitively |
+| `games` | One row per game, seeded by migration; startup fails if a `GameModule` has no row |
+| `player_game_stats` | Rating (starts at 1000), peak rating, ranked/casual W-L-D per user per game |
+| `matches` / `match_players` | Match lifecycle and participants (UUIDv7 ids, optimistic locking) |
+| `rating_history` | One row per player per rated match; uniqueness prevents double rating updates |
+| `match_events` | Ordered, unique-sequence event log per match with JSONB payloads |
+| `friendships` / `game_invitations` | Future features (schema only) |
 
 ## API
 
@@ -76,5 +97,5 @@ Every other route requires authentication (returns 401 until Cognito is wired up
 
 ## Adding a game
 
-1. Backend: create `game/<name>/<Name>Module.java` implementing `GameModule` and annotated with `@Component`. It's picked up automatically.
+1. Backend: create `game/<name>/<Name>Module.java` implementing `GameModule` and annotated with `@Component`, and add a Flyway migration inserting its `games` row.
 2. Frontend: add an entry to `src/games/registry.ts` for its accent color, icon and blurb. Unknown slugs still render with a neutral style.
