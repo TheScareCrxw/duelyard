@@ -41,6 +41,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Trust X-Forwarded-* from the load balancer (correct scheme/host behind HTTPS termination).
+  forward-headers-strategy: framework
+  shutdown: graceful
 
 app:
   cognito:

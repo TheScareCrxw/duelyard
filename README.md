@@ -2,33 +2,47 @@
 
 Competitive 1v1 mini-games (darts, mini golf, 8-ball pool and rocket launcher), each with its own Elo ladder.
 
+- Accounts via Amazon Cognito (username/email + password, or Google), persistent HttpOnly-cookie sessions
+- Ranked and casual matchmaking per game, live matches over WebSockets
+- Server-authoritative games: clients send inputs, the server simulates, scores and decides results
+- Elo ratings with history charts, profiles, match history and leaderboards
+
+Docs: [game rules and real-time protocol](docs/games.md) · [AWS deployment](docs/deployment.md)
+
 ## Repository layout
 
 ```
 backend/            Spring Boot 4.1 API (Java 25, Maven wrapper)
   src/main/java/com/duelyard/
-    config/         Security and CORS configuration
+    config/         Security, CORS, clock
     common/         Shared error handling
-    game/           Game catalog and the GameModule extension point
-      darts/ minigolf/ pool/ rocket/   One module per game
-    auth/ user/ rating/ leaderboard/
-    multiplayer/ matchmaking/ match/   Reserved for later phases (see package-info.java)
+    auth/           Cognito JWT validation, Cognito user API client
+    user/           Accounts, profiles, settings, provisioning
+    game/           Catalog, GameModule/GameSession engine contract
+      darts/ minigolf/ pool/ rocket/   One server-side engine per game
+    match/          Match lifecycle, completion (results + ratings), history
+    rating/         Elo, per-game stats, rating history
+    leaderboard/    Ranked boards (SQL read model)
+    matchmaking/    Queues and pairing (game-agnostic)
+    multiplayer/    WebSocket endpoint, tickets, live match rooms
 frontend/           Next.js 16 (App Router, TypeScript, Tailwind CSS 4)
   src/
-    app/            Routes
-    components/     Reusable UI (layout, ui, games, rank)
-    games/          Per-game presentation; gameplay code lands in games/<slug>/
+    app/            Routes ((auth), (game)/play, (game)/match, profile, settings, leaderboards, ...)
+    components/     Reusable UI (layout, auth, player, stats, match, leaderboard, ...)
+    games/          One canvas renderer per game + presentation registry
+    contexts/       Realtime (shared WebSocket connection)
     services/       Server-side API client
-    types/          API and domain types
-    hooks/ contexts/  Reserved for later phases
-    lib/            Pure helpers
-docker-compose.yml  Local PostgreSQL and Redis
+    lib/            Auth (BFF), realtime client, helpers
+    types/          API and protocol types
+infra/cognito/      Scripts that provision the Cognito pool, client, domain and Google IdP
+docs/               Game rules, protocol, deployment
+docker-compose.yml  PostgreSQL + Redis; `--profile app` adds the backend and frontend containers
 ```
 
 ## Prerequisites
 
 - Java 25
-- Node.js 20.9 or newer
+- Node.js 20.9 or newer (24 recommended)
 - Docker Desktop to run PostgreSQL and Redis locally (or your own PostgreSQL 18 matching the `DB_*` settings below)
 
 Tests do **not** need Docker: they start a real embedded PostgreSQL 18 automatically.
@@ -47,17 +61,24 @@ cd backend
 
 # 3. Frontend: http://localhost:3000
 cd frontend
-cp .env.example .env.local
+cp .env.example .env.local     # or let infra/cognito/setup-cognito.sh write it
 npm install
 npm run dev
 ```
 
+To play locally you need two accounts signed in at once: use two browsers (or a normal and a
+private window). Queue for the same game and mode in both.
+
+Everything in containers instead: `docker compose --profile app up --build`.
+
 ## Tests
 
 ```bash
-cd backend && ./mvnw test
+cd backend && ./mvnw test          # unit + integration (embedded PostgreSQL, real WebSocket clients)
 cd frontend && npm test && npm run lint && npx tsc --noEmit && npm run build
 ```
+
+CI (`.github/workflows/ci.yml`) runs both on every push and pull request.
 
 ## Configuration
 
@@ -72,7 +93,9 @@ cd frontend && npm test && npm run lint && npx tsc --noEmit && npm run build
 | `COGNITO_REGION` | backend + frontend | `us-east-1` | User pool region |
 | `COGNITO_USER_POOL_ID` | backend | (placeholder) | e.g. `us-east-1_AbC123` |
 | `COGNITO_CLIENT_IDS` | backend | (placeholder) | Comma-separated app client ids whose tokens are accepted |
+| `APP_REALTIME_COUNTDOWN` / `..._DISCONNECT_GRACE` | backend | `5s` / `30s` | Match countdown and reconnect window |
 | `API_BASE_URL` | frontend (server only) | `http://localhost:8080` | Where the Next.js server reaches the API |
+| `NEXT_PUBLIC_REALTIME_URL` | frontend (build time, public) | `ws://localhost:8080/ws` | Game WebSocket endpoint |
 | `APP_URL` | frontend (server only) | (none) | Public URL of the site, e.g. `http://localhost:3000` |
 | `COGNITO_CLIENT_ID` / `COGNITO_CLIENT_SECRET` | frontend (server only) | (none) | App client credentials |
 | `COGNITO_DOMAIN` | frontend (server only) | (none) | e.g. `https://duelyard.auth.us-east-1.amazoncognito.com` |
@@ -182,11 +205,16 @@ Both scripts are safe to re-run. What they configure, if you prefer the AWS cons
 | GET | `/api/players/{username}/matches?page=&size=` | public | Paginated match history (403 if private) |
 | GET | `/api/players/{username}/rating-history?game=&limit=` | public | Rating after each ranked match, oldest first (403 if private) |
 | GET | `/api/leaderboards/{global\|gameSlug}?search=&page=&size=` | public | Ranked players with true ranks (ties share a rank); `viewer` holds the signed-in caller's row |
+| POST | `/api/realtime/tickets` | bearer | One-time WebSocket ticket (30 s) |
+| WS | `/ws?ticket=` | ticket | Matchmaking and live matches; protocol in [docs/games.md](docs/games.md) |
 | GET | `/actuator/health` | public | Health check |
 
 Every other route requires a valid Cognito access token.
 
 ## Adding a game
 
-1. Backend: create `game/<name>/<Name>Module.java` implementing `GameModule` and annotated with `@Component`, and add a Flyway migration inserting its `games` row.
-2. Frontend: add an entry to `src/games/registry.ts` for its accent color, icon and blurb. Unknown slugs still render with a neutral style.
+1. Backend: implement a `GameSession` (rules + simulation, no I/O) and a `@Component` `GameModule`
+   in `game/<name>/`, and add a Flyway migration inserting its `games` row. Matchmaking, rooms,
+   ratings, profiles and leaderboards pick it up with no other changes.
+2. Frontend: add a renderer in `src/games/<slug>/` (draws the view, animates events, sends inputs),
+   register it in `src/games/renderers.ts`, and add its presentation to `src/games/registry.ts`.
