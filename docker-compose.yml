@@ -1,0 +1,67 @@
+# Local development infrastructure. Start with: docker compose up -d
+# Credentials here are for local development only; production uses AWS-managed services and secrets.
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: duelyard-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-duelyard}
+      POSTGRES_USER: ${POSTGRES_USER:-duelyard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-duelyard_local}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: duelyard-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Full stack in containers: docker compose --profile app up --build
+  # Reads Cognito settings from backend/.env and frontend/.env.local (see infra/cognito).
+  backend:
+    profiles: [app]
+    build: ./backend
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file: [./backend/.env]
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-duelyard}
+      DB_USERNAME: ${POSTGRES_USER:-duelyard}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-duelyard_local}
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  frontend:
+    profiles: [app]
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_REALTIME_URL: ws://localhost:8080/ws
+    depends_on: [backend]
+    env_file: [./frontend/.env.local]
+    environment:
+      API_BASE_URL: http://backend:8080
+      APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres-data:
+  redis-data:
